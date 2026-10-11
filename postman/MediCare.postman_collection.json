@@ -1,0 +1,234 @@
+{
+  "info": {
+    "name": "MediCare Doctor Appointment System",
+    "description": "Run in order: Login Admin / Register Patient first. Login requests store the JWT in collection variables automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "adminToken", "value": "" },
+    { "key": "patientToken", "value": "" },
+    { "key": "doctorId", "value": "1" },
+    { "key": "appointmentId", "value": "1" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register patient",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "if (pm.response.code === 201) { pm.collectionVariables.set('patientToken', pm.response.json().token); }"
+            ] }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"John Patient\",\n  \"email\": \"john@example.com\",\n  \"password\": \"secret123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] }
+          }
+        },
+        {
+          "name": "Login patient",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "if (pm.response.code === 200) { pm.collectionVariables.set('patientToken', pm.response.json().token); }"
+            ] }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"secret123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Login admin",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "if (pm.response.code === 200) { pm.collectionVariables.set('adminToken', pm.response.json().token); }"
+            ] }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@medicare.com\",\n  \"password\": \"Admin@123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Login with wrong password (expect 401)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"wrong\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Doctors",
+      "item": [
+        {
+          "name": "List doctors (patient or admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/doctors", "host": ["{{baseUrl}}"], "path": ["api", "doctors"] }
+          }
+        },
+        {
+          "name": "Get doctor by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/doctors/{{doctorId}}", "host": ["{{baseUrl}}"], "path": ["api", "doctors", "{{doctorId}}"] }
+          }
+        },
+        {
+          "name": "Create doctor (ADMIN)",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "if (pm.response.code === 201) { pm.collectionVariables.set('doctorId', pm.response.json().id); }"
+            ] }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Dr. Meera Iyer\",\n  \"specialization\": \"Gynecology\",\n  \"availability\": \"Mon-Fri, 10:00 - 15:00\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/doctors", "host": ["{{baseUrl}}"], "path": ["api", "doctors"] }
+          }
+        },
+        {
+          "name": "Create doctor as patient (expect 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{patientToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Dr. Not Allowed\",\n  \"specialization\": \"None\",\n  \"availability\": \"Never\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/doctors", "host": ["{{baseUrl}}"], "path": ["api", "doctors"] }
+          }
+        },
+        {
+          "name": "Create doctor with invalid body (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"\",\n  \"specialization\": \"\",\n  \"availability\": \"\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/doctors", "host": ["{{baseUrl}}"], "path": ["api", "doctors"] }
+          }
+        },
+        {
+          "name": "Update doctor (ADMIN)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Dr. Meera Iyer\",\n  \"specialization\": \"Gynecology\",\n  \"availability\": \"Mon-Sat, 09:00 - 14:00\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/doctors/{{doctorId}}", "host": ["{{baseUrl}}"], "path": ["api", "doctors", "{{doctorId}}"] }
+          }
+        },
+        {
+          "name": "Delete doctor (ADMIN)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/doctors/{{doctorId}}", "host": ["{{baseUrl}}"], "path": ["api", "doctors", "{{doctorId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Appointments",
+      "item": [
+        {
+          "name": "Book appointment (PATIENT)",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "if (pm.response.code === 201) { pm.collectionVariables.set('appointmentId', pm.response.json().id); }"
+            ] }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{patientToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"doctorId\": 1,\n  \"appointmentDate\": \"2027-01-15T10:30:00\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/appointments", "host": ["{{baseUrl}}"], "path": ["api", "appointments"] },
+            "description": "Use a date in the future. Booking the same doctor/time twice returns 400."
+          }
+        },
+        {
+          "name": "My appointments (PATIENT)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/appointments/my", "host": ["{{baseUrl}}"], "path": ["api", "appointments", "my"] }
+          }
+        },
+        {
+          "name": "All appointments (ADMIN)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/appointments/all", "host": ["{{baseUrl}}"], "path": ["api", "appointments", "all"] }
+          }
+        },
+        {
+          "name": "All appointments as patient (expect 403)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/appointments/all", "host": ["{{baseUrl}}"], "path": ["api", "appointments", "all"] }
+          }
+        },
+        {
+          "name": "Cancel appointment (PATIENT)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/appointments/{{appointmentId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "appointments", "{{appointmentId}}", "cancel"] }
+          }
+        },
+        {
+          "name": "Update appointment status (ADMIN)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"COMPLETED\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/appointments/{{appointmentId}}/status", "host": ["{{baseUrl}}"], "path": ["api", "appointments", "{{appointmentId}}", "status"] }
+          }
+        },
+        {
+          "name": "My appointments without token (expect 401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/appointments/my", "host": ["{{baseUrl}}"], "path": ["api", "appointments", "my"] }
+          }
+        }
+      ]
+    }
+  ]
+}
